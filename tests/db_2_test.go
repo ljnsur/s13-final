@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/jmoiron/sqlx"
+	_ "github.com/joho/godotenv/autoload"
 	"github.com/stretchr/testify/assert"
 	_ "modernc.org/sqlite"
 )
