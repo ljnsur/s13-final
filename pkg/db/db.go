@@ -13,8 +13,8 @@ import (
 var DBPath string
 
 const (
-	DefaultDBSQL  = "../pkg/db/scheduler.sql"
-	DefaultDBPath = "../pkg/db/scheduler.db"
+	DefaultDBSQL  = "./pkg/db/scheduler.sql"
+	DefaultDBPath = "./pkg/db/scheduler.db"
 )
 
 func Init() error {

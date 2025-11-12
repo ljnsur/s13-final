@@ -27,7 +27,7 @@
 
     TODO_PORT=7540 TODO_PASSWORD=12345 TODO_DBFILE="../server/scheduler.db" go run main.go 
     TODO_DBFILE="../server/scheduler.db" go test ./tests
-   по умолчанию БД находится в "../pkg/db/scheduler.db"
+   по умолчанию БД находится в "/pkg/db/scheduler.db"
 
 3. Откройте в браузере: http://localhost:7540
 
