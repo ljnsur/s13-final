@@ -19,7 +19,7 @@ func main() {
 	}
 	defer file.Close()
 
-	FullLog := log.New(file, "INFf: ", log.Lshortfile|log.LstdFlags)
+	FullLog := log.New(file, "INFO: ", log.Lshortfile|log.LstdFlags)
 
 	applog.SetLogger(FullLog)
 
