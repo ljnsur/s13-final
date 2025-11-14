@@ -30,7 +30,7 @@ func main() {
 
 	api.InitAuth()
 
-	webDir := "../web"
+	webDir := "./web"
 	server.Run(webDir, FullLog)
 
 }
