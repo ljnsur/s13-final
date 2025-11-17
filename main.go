@@ -33,7 +33,7 @@ func main() {
 		fullLog.Fatalf("Ошибка инициализации БД: %v", err)
 	}
 	// Запуск сервера
-	webDir := ".web"
+	webDir := "web"
 	server.Run(webDir, fullLog)
 
 	// Ожидание сигнала завершения
