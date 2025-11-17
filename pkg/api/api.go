@@ -5,10 +5,6 @@ import (
 	"net/http"
 )
 
-const (
-	TIME_FORMAT = "20060102"
-)
-
 // Инициализация маршрутов API
 func Init() {
 	// Публичные маршруты (без авторизации)
@@ -31,6 +27,10 @@ func writeJson(w http.ResponseWriter, status int, data any) {
 	}
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	w.WriteHeader(status)
-	w.Write(resp)
+	_, err = w.Write(resp)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 
 }

@@ -32,6 +32,5 @@ func showTasksHandler(w http.ResponseWriter, r *http.Request) {
 		writeJson(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
 		return
 	}
-	applog.Printf("showTasks: найдено %d задач", len(tasks))
 	writeJson(w, http.StatusOK, TasksResp{Tasks: tasks})
 }

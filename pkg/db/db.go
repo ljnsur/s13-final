@@ -10,11 +10,14 @@ import (
 	_ "modernc.org/sqlite"
 )
 
-var DBPath string
+var (
+	DB     *sql.DB
+	DBPath string
+)
 
 const (
-	DefaultDBSQL  = "./pkg/db/scheduler.sql"
-	DefaultDBPath = "./pkg/db/scheduler.db"
+	DefaultDBSQL  = "../pkg/db/scheduler.sql"
+	DefaultDBPath = "../pkg/db/scheduler.db"
 )
 
 func Init() error {
@@ -35,8 +38,41 @@ func Init() error {
 	} else {
 		applog.Printf("Init: файл БД найден: %s", DBPath)
 	}
-	return err
 
+	// Открываем пул соединений
+	DB, err = sql.Open("sqlite", DBPath)
+	if err != nil {
+		applog.Printf("Init: база не найдена, %s", err.Error())
+		return err
+	}
+
+	DB.SetMaxOpenConns(2)
+	DB.SetMaxIdleConns(2)
+	DB.SetConnMaxLifetime(0)
+
+	if err = DB.Ping(); err != nil {
+		DB.Close()
+		DB = nil
+		applog.Printf("Init: соединение с БД не установлено %s", err.Error())
+		return err
+	}
+
+	applog.Printf("Init: пул соединений успешно открыт")
+	return nil
+
+}
+
+func Close() error {
+	if DB != nil {
+		err := DB.Close()
+		if err != nil {
+			applog.Printf("Close: ошибка закрытия пула соединений: %v", err)
+			return err
+		}
+		DB = nil
+		applog.Printf("Close: пул соединений закрыт")
+	}
+	return nil
 }
 
 func createDB(dbFile, dbSQL string) {

@@ -52,13 +52,16 @@ func doneTaskHandler(w http.ResponseWriter, r *http.Request) {
 		writeJson(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
 		return
 	}
-
+	if nextDate == "" {
+		applog.Printf("doneTask: следующая дата не назначена для id=%s: %v", id, err)
+		writeJson(w, http.StatusBadRequest, map[string]string{"error": "следующая дата не назначена"})
+		return
+	}
 	if err := db.UpdateDate(nextDate, id); err != nil {
 		applog.Printf("doneTask: ошибка обновления даты id=%s next=%s: %v", id, nextDate, err)
 		writeJson(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
 		return
 	}
 
-	applog.Printf("doneTask: обновлена дата задачи id=%s next=%s", id, nextDate)
 	writeJson(w, http.StatusOK, map[string]any{})
 }

@@ -38,7 +38,8 @@ func signInHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	pass := os.Getenv("TODO_PASSWORD")
+	// Используем уже инициализированный в InitAuth() jwtKey, чтобы не читать env каждый раз
+	pass := string(jwtKey)
 	if pass == "" {
 		// Просто пускаем (для тестов)
 		applog.Printf("signIn: TODO_PASSWORD пуст — выдаётся пустой токен для %s", r.RemoteAddr)
@@ -95,7 +96,7 @@ func signInHandler(w http.ResponseWriter, r *http.Request) {
 func auth(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		applog.Printf("auth: начало проверки авторизации для %s %s", r.Method, r.RemoteAddr)
-		pass := os.Getenv("TODO_PASSWORD")
+		pass := string(jwtKey)
 		if pass == "" {
 			// Если пароль не задан — пропускаем без проверки
 			applog.Printf("auth: TODO_PASSWORD пуст — пропуск проверки для %s", r.RemoteAddr)

@@ -5,16 +5,13 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/ljnsur/todosay/pkg/constants"
 	applog "github.com/ljnsur/todosay/pkg/log"
 	_ "modernc.org/sqlite"
 )
 
-type Task struct {
-	Date    string `json:"date"`
-	Title   string `json:"title"`
-	Comment string `json:"comment"`
-	Repeat  string `json:"repeat"`
-}
+const Limit = 50
+
 type DBTasks struct {
 	ID      string `json:"id"`
 	Date    string `json:"date"`
@@ -23,20 +20,16 @@ type DBTasks struct {
 	Repeat  string `json:"repeat"`
 }
 
-func AddTask(task *Task) (int64, error) {
+func AddTask(task *DBTasks) (int64, error) {
 	applog.Printf("AddTask: попытка добавить задачу title=%q date=%s repeat=%q", task.Title, task.Date, task.Repeat)
-
-	db, err := sql.Open("sqlite", DBPath)
-	if err != nil {
-		applog.Printf("AddTask: ошибка открытия БД: %v", err)
-		return 0, err
+	if DB == nil {
+		return 0, fmt.Errorf("база данных не инициализирована")
 	}
-	defer db.Close()
 
 	var id int64
 
 	query := "INSERT INTO scheduler (date, title, comment, repeat) VALUES ($data, $title, $comment, $repeat)"
-	res, err := db.Exec(query, sql.Named("data", task.Date),
+	res, err := DB.Exec(query, sql.Named("data", task.Date),
 		sql.Named("title", task.Title),
 		sql.Named("comment", task.Comment),
 		sql.Named("repeat", task.Repeat))
@@ -58,7 +51,7 @@ func ShowTasks(search string, limit int) ([]*DBTasks, error) {
 	applog.Printf("ShowTasks: поиск=%q limit=%d", search, limit)
 
 	if limit <= 0 || limit > 50 {
-		limit = 50
+		limit = Limit
 	}
 
 	var query string
@@ -70,31 +63,30 @@ func ShowTasks(search string, limit int) ([]*DBTasks, error) {
 		query = base + " ORDER BY date ASC LIMIT $limit"
 		args = append(args, sql.Named("limit", limit))
 
-	} else if isDate(search) {
+	}
+	if isDate(search) {
 		parsed, err := time.Parse("02.01.2006", search)
 		if err != nil {
 			applog.Printf("ShowTasks: неверная дата поиска %q: %v", search, err)
 			return nil, err
 		}
-		date := parsed.Format("20060102")
+		date := parsed.Format(constants.TimeFormat)
 
 		query = base + " WHERE date = $date ORDER BY date ASC LIMIT $limit"
 		args = append(args, sql.Named("date", date), sql.Named("limit", limit))
 
-	} else {
+	}
+	if (search != "") && (!isDate(search)) {
 		like := "%" + search + "%"
 		query = base + " WHERE title LIKE $like1 OR comment LIKE $like2 ORDER BY date ASC LIMIT $limit"
 		args = append(args, sql.Named("like1", like), sql.Named("like2", like), sql.Named("limit", limit))
 	}
 
-	db, err := sql.Open("sqlite", DBPath)
-	if err != nil {
-		applog.Printf("ShowTasks: ошибка открытия БД: %v", err)
-		return nil, err
+	if DB == nil {
+		return nil, fmt.Errorf("база данных не инициализирована")
 	}
-	defer db.Close()
 
-	rows, err := db.Query(query, args...)
+	rows, err := DB.Query(query, args...)
 	if err != nil {
 		applog.Printf("ShowTasks: ошибка выполнения запроса: %v", err)
 		return nil, err
@@ -120,6 +112,7 @@ func ShowTasks(search string, limit int) ([]*DBTasks, error) {
 	if tasks == nil {
 		tasks = []*DBTasks{}
 	}
+
 	applog.Printf("ShowTasks: найдено %d задач", len(tasks))
 	return tasks, nil
 }
@@ -134,16 +127,14 @@ func GetTask(id string) (*DBTasks, error) {
 		return nil, fmt.Errorf("пустой id")
 	}
 	applog.Printf("GetTask: получение задачи id=%s", id)
-	db, err := sql.Open("sqlite", DBPath)
-	if err != nil {
-		applog.Printf("GetTask: ошибка открытия БД: %v", err)
-		return nil, err
+
+	if DB == nil {
+		return nil, fmt.Errorf("база данных не инициализирована")
 	}
-	defer db.Close()
 
 	var t DBTasks
 
-	err = db.QueryRow("SELECT id, date, title, comment, repeat FROM scheduler WHERE id = $id", sql.Named("id", id)).Scan(&t.ID, &t.Date, &t.Title, &t.Comment, &t.Repeat)
+	err := DB.QueryRow("SELECT id, date, title, comment, repeat FROM scheduler WHERE id = $id", sql.Named("id", id)).Scan(&t.ID, &t.Date, &t.Title, &t.Comment, &t.Repeat)
 
 	if err == sql.ErrNoRows {
 		applog.Printf("GetTask: задача не найдена id=%s", id)
@@ -164,16 +155,13 @@ func UpdateTask(task *DBTasks) error {
 		return fmt.Errorf("id отсутвует")
 	}
 	applog.Printf("UpdateTask: обновление задачи id=%s title=%q", task.ID, task.Title)
-	db, err := sql.Open("sqlite", DBPath)
-	if err != nil {
-		applog.Printf("UpdateTask: ошибка открытия БД: %v", err)
-		return err
+	if DB == nil {
+		return fmt.Errorf("база данных не инициализирована")
 	}
-	defer db.Close()
 
 	query := "UPDATE scheduler SET date = $date, title = $title, comment = $comment, repeat = $repeat WHERE id = $id"
 
-	res, err := db.Exec(query, sql.Named("date", task.Date), sql.Named("title", task.Title), sql.Named("comment", task.Comment), sql.Named("repeat", task.Repeat), sql.Named("id", task.ID))
+	res, err := DB.Exec(query, sql.Named("date", task.Date), sql.Named("title", task.Title), sql.Named("comment", task.Comment), sql.Named("repeat", task.Repeat), sql.Named("id", task.ID))
 	if err != nil {
 		applog.Printf("UpdateTask: ошибка выполнения UPDATE id=%s: %v", task.ID, err)
 		return err
@@ -190,7 +178,7 @@ func UpdateTask(task *DBTasks) error {
 		return fmt.Errorf("задача не найдена")
 	}
 
-	applog.Printf("UpdateTask: успешно обновлена задача id=%s", task.ID)
+	applog.Printf("updateTask: задача обновлена id=%s title=%q", task.ID, task.Title)
 	return nil
 }
 
@@ -199,14 +187,11 @@ func DeleteTask(id string) error {
 		return fmt.Errorf("id отсутвует")
 	}
 	applog.Printf("DeleteTask: удаление задачи id=%s", id)
-	db, err := sql.Open("sqlite", DBPath)
-	if err != nil {
-		applog.Printf("DeleteTask: ошибка открытия БД: %v", err)
-		return err
+	if DB == nil {
+		return fmt.Errorf("база данных не инициализирована")
 	}
-	defer db.Close()
 
-	_, err = db.Exec("DELETE FROM scheduler WHERE id = $id", sql.Named("id", id))
+	_, err := DB.Exec("DELETE FROM scheduler WHERE id = $id", sql.Named("id", id))
 	if err != nil {
 		applog.Printf("DeleteTask: ошибка выполнения DELETE id=%s: %v", id, err)
 		return err
@@ -217,23 +202,18 @@ func DeleteTask(id string) error {
 }
 
 func UpdateDate(date, id string) error {
-	if id == "" {
-		return fmt.Errorf("id отсутвует")
-	}
 
 	if date == "" {
 		return fmt.Errorf("date отсутвует")
 	}
 	applog.Printf("UpdateDate: обновление даты id=%s date=%s", id, date)
-	db, err := sql.Open("sqlite", DBPath)
-	if err != nil {
-		return err
+	if DB == nil {
+		return fmt.Errorf("база данных не инициализирована")
 	}
-	defer db.Close()
 
 	query := "UPDATE scheduler SET date = $date WHERE id = $id"
 
-	res, err := db.Exec(query, sql.Named("date", date), sql.Named("id", id))
+	res, err := DB.Exec(query, sql.Named("date", date), sql.Named("id", id))
 	if err != nil {
 		applog.Printf("UpdateDate: ошибка выполнения UPDATE id=%s: %v", id, err)
 		return err

@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/ljnsur/todosay/pkg/constants"
 	applog "github.com/ljnsur/todosay/pkg/log"
 )
 
@@ -24,7 +25,7 @@ func nextDayHandler(w http.ResponseWriter, r *http.Request) {
 	if now == "" {
 		now = time.Now().String()
 	}
-	nowTime, err := time.Parse(TIME_FORMAT, now)
+	nowTime, err := time.Parse(constants.TimeFormat, now)
 	if err != nil {
 		applog.Printf("nextDay: неверный формат now: %v", err)
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -51,8 +52,8 @@ func nextDayHandler(w http.ResponseWriter, r *http.Request) {
 
 func NextDate(now time.Time, dstart string, repeat string) (string, error) {
 
-	applog.Printf("NextDate: вычисление следующей даты now=%s dstart=%s repeat=%s", now.Format(TIME_FORMAT), dstart, repeat)
-	dstartTime, err := time.Parse(TIME_FORMAT, dstart)
+	applog.Printf("NextDate: вычисление следующей даты now=%s dstart=%s repeat=%s", now.Format(constants.TimeFormat), dstart, repeat)
+	dstartTime, err := time.Parse(constants.TimeFormat, dstart)
 	if err != nil {
 		applog.Printf("NextDate: ошибка парсинга dstart: %v", err)
 		return "", err
@@ -76,8 +77,8 @@ func NextDate(now time.Time, dstart string, repeat string) (string, error) {
 		for {
 			nextDate = nextDate.AddDate(0, 0, rule.Days[0])
 			if afterNow(nextDate, now) {
-				applog.Printf("NextDate: найдено nextDate=%s для типа d", nextDate.Format(TIME_FORMAT))
-				return nextDate.Format(TIME_FORMAT), nil
+				applog.Printf("NextDate: найдено nextDate=%s для типа d", nextDate.Format(constants.TimeFormat))
+				return nextDate.Format(constants.TimeFormat), nil
 			}
 		}
 	case "w":
@@ -87,8 +88,8 @@ func NextDate(now time.Time, dstart string, repeat string) (string, error) {
 				day := ruWeekDay(nextDate.Weekday())
 				for _, v := range rule.Days {
 					if day == v {
-						applog.Printf("NextDate: найдено nextDate=%s для типа w", nextDate.Format(TIME_FORMAT))
-						return nextDate.Format(TIME_FORMAT), nil
+						applog.Printf("NextDate: найдено nextDate=%s для типа w", nextDate.Format(constants.TimeFormat))
+						return nextDate.Format(constants.TimeFormat), nil
 					}
 				}
 			}
@@ -152,21 +153,21 @@ func NextDate(now time.Time, dstart string, repeat string) (string, error) {
 			}
 
 			if bestSet {
-				applog.Printf("NextDate: найдено nextDate=%s для типа m", best.Format(TIME_FORMAT))
-				return best.Format(TIME_FORMAT), nil
+				applog.Printf("NextDate: найдено nextDate=%s для типа m", best.Format(constants.TimeFormat))
+				return best.Format(constants.TimeFormat), nil
 			}
 		}
 		if !bestSet {
 			applog.Printf("NextDate: за год подходящая дата не найдена")
 			return "", fmt.Errorf("за год подходящая дата не найдена")
 		}
-		return best.Format(TIME_FORMAT), nil
+		return best.Format(constants.TimeFormat), nil
 	case "y":
 		for {
 			nextDate = nextDate.AddDate(1, 0, 0)
 			if afterNow(nextDate, now) {
-				applog.Printf("NextDate: найдено nextDate=%s для типа y", nextDate.Format(TIME_FORMAT))
-				return nextDate.Format(TIME_FORMAT), nil
+				applog.Printf("NextDate: найдено nextDate=%s для типа y", nextDate.Format(constants.TimeFormat))
+				return nextDate.Format(constants.TimeFormat), nil
 			}
 		}
 	default:

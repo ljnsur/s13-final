@@ -8,9 +8,9 @@ import (
 	"strconv"
 	"time"
 
-	applog "github.com/ljnsur/todosay/pkg/log"
-
+	"github.com/ljnsur/todosay/pkg/constants"
 	"github.com/ljnsur/todosay/pkg/db"
+	applog "github.com/ljnsur/todosay/pkg/log"
 )
 
 // taskHandler маршрутизует HTTP-запросы для работы с задачами по HTTP-методу.
@@ -33,7 +33,7 @@ func taskHandler(w http.ResponseWriter, r *http.Request) {
 	case http.MethodDelete:
 		deleteTaskHandler(w, r)
 	default:
-		http.Error(w, http.ErrAbortHandler.Error(), http.StatusBadRequest)
+		http.Error(w, http.ErrAbortHandler.Error(), http.StatusMethodNotAllowed)
 		return
 	}
 }
@@ -41,10 +41,9 @@ func taskHandler(w http.ResponseWriter, r *http.Request) {
 // addTaskHandler обрабатывает POST-запросы для добавления новой задачи.
 // Ожидается, что в теле запроса будет передан JSON с данными задачи.
 func addTaskHandler(w http.ResponseWriter, r *http.Request) {
-	defer r.Body.Close()
 
 	var buf bytes.Buffer
-	var task db.Task
+	var task db.DBTasks
 
 	if _, err := buf.ReadFrom(r.Body); err != nil {
 		applog.Printf("addTask: ошибка чтения тела запроса: %v", err)
@@ -107,7 +106,6 @@ func getTaskHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	applog.Printf("getTask: задача получена id=%s title=%q", id, task.Title)
 	writeJson(w, http.StatusOK, task)
 }
 
@@ -118,7 +116,6 @@ func updateTaskHandler(w http.ResponseWriter, r *http.Request) {
 	var input db.DBTasks
 	var buf bytes.Buffer
 
-	defer r.Body.Close()
 	_, err := buf.ReadFrom(r.Body)
 	if err != nil {
 		applog.Printf("updateTask: ошибка чтения тела запроса: %v", err)
@@ -147,10 +144,10 @@ func updateTaskHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if input.Date == "" {
-		input.Date = time.Now().Format(TIME_FORMAT)
+		input.Date = time.Now().Format(constants.TimeFormat)
 	}
 
-	t, err := time.Parse(TIME_FORMAT, input.Date)
+	t, err := time.Parse(constants.TimeFormat, input.Date)
 	if err != nil {
 		applog.Printf("updateTask: неверный формат даты %q: %v", input.Date, err)
 		writeJson(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
@@ -159,7 +156,7 @@ func updateTaskHandler(w http.ResponseWriter, r *http.Request) {
 
 	if input.Repeat == "" {
 		input.Repeat = ""
-	} else if _, err := NextDate(time.Now(), t.Format(TIME_FORMAT), input.Repeat); err != nil {
+	} else if _, err := NextDate(time.Now(), t.Format(constants.TimeFormat), input.Repeat); err != nil {
 		applog.Printf("updateTask: неверный формат повтора %q: %v", input.Repeat, err)
 		writeJson(w, http.StatusBadRequest, map[string]string{"error": "Неправильный формат повтора"})
 		return
@@ -171,7 +168,6 @@ func updateTaskHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	applog.Printf("updateTask: задача обновлена id=%s title=%q", input.ID, input.Title)
 	writeJson(w, http.StatusOK, map[string]interface{}{})
 }
 
@@ -199,7 +195,6 @@ func deleteTaskHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	applog.Printf("deleteTask: задача удалена id=%s", id)
 	writeJson(w, http.StatusOK, map[string]any{})
 }
 
@@ -207,9 +202,9 @@ func deleteTaskHandler(w http.ResponseWriter, r *http.Request) {
 // - если дата пустая → сегодня
 // - если дата в прошлом → переносим на ближайшую по правилу (или сегодня, если одноразовая)
 // - валидирует правило повторения (если есть)
-func ValidateAndNormalizeTask(task *db.Task) error {
+func ValidateAndNormalizeTask(task *db.DBTasks) error {
 	now := time.Now()
-	normalizedNow := now.Format(TIME_FORMAT)
+	normalizedNow := now.Format(constants.TimeFormat)
 
 	// Если дата не указана — ставим сегодня
 	if task.Date == "" {
@@ -223,7 +218,7 @@ func ValidateAndNormalizeTask(task *db.Task) error {
 	}
 
 	// Парсим дату задачи
-	t, err := time.Parse(TIME_FORMAT, task.Date)
+	t, err := time.Parse(constants.TimeFormat, task.Date)
 	if err != nil {
 		return fmt.Errorf("invalid date format")
 	}
@@ -236,8 +231,8 @@ func ValidateAndNormalizeTask(task *db.Task) error {
 			return nil
 		}
 		// Если задача сегодняшняя с правилом (и добавляется впервые)
-		if t.Format(TIME_FORMAT) == now.Format(TIME_FORMAT) {
-			task.Date = now.Format(TIME_FORMAT)
+		if t.Format(constants.TimeFormat) == now.Format(constants.TimeFormat) {
+			task.Date = now.Format(constants.TimeFormat)
 			return nil
 		}
 

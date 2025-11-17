@@ -20,7 +20,7 @@ func Run(webDir string, loggerInfo *log.Logger) {
 	}
 
 	http.Handle("/", http.FileServer(http.Dir(webDir)))
-	config := &http.Server{
+	srv := &http.Server{
 		Addr:         ":" + port,
 		ErrorLog:     loggerInfo,
 		ReadTimeout:  10 * time.Second,
@@ -29,11 +29,11 @@ func Run(webDir string, loggerInfo *log.Logger) {
 	}
 	api.Init()
 
-	fmt.Printf("сервер запущен %s\n", fmt.Sprintf("http://localhost%s", config.Addr))
-
-	err := config.ListenAndServe()
-	if err != nil {
-		loggerInfo.Fatalf("ошибка запуска сервера: %s", err)
-	}
+	go func() {
+		fmt.Printf("сервер запущен на http://localhost:%s\n", port)
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			loggerInfo.Fatalf("Run: сервер упал: %v", err)
+		}
+	}()
 
 }
